@@ -20,16 +20,15 @@ def read_dmp_data(path):
     return data
 
 def convert2matrix(footprint):
-    matrix = np.array(
-        [[None for j in range(192)] for i in range((footprint[-1][0].date() - footprint[0][0].date()).days+1)],
-        dtype=float)
+    matrix = [[None for j in range(192)] for i in range((footprint[-1][0].date() - footprint[0][0].date()).days+1)]
 
     for start_time, lat, lon in footprint:
         row = (start_time.date() - footprint[0][0].date()).days
         col = int((start_time - start_time.replace(hour=0, minute=0)).total_seconds()/(15*60))
 
-        matrix[row, col] = lat
-        matrix[row, col+96] = lon
+        matrix[row][col] = lat
+        matrix[row][col+96] = lon
+        
     
         
         
