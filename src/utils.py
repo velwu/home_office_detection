@@ -14,7 +14,7 @@ def read_dmp_data(path):
                     float(lat),
                     float(lon)])
     
-    for uuid in data:
+    for uuid in list(data):
         data[uuid].sort()
     
     return data
@@ -28,8 +28,21 @@ def convert2matrix(footprint):
 
         matrix[row][col] = lat
         matrix[row][col+96] = lon
-        
+
+    _, pervious_lat, pervious_lon = footprint[0]
+
+    for row in range(len(matrix)):
+        for col in range(96):
+            if matrix[row][col] == None:
+                matrix[row][col] = pervious_lat
+                matrix[row][col+96] = pervious_lon
+            else:
+                pervious_lat = matrix[row][col]
+                pervious_lon = matrix[row][col+96]
     
+    return np.array(matrix, dtype=float)
+        
+
         
         
             
