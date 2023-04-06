@@ -7,6 +7,11 @@ import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 
+for path in [
+    'display',
+    
+]
+
 def read_dmp_data(path):
     data = {}
     with open(path) as f:
