@@ -7,6 +7,7 @@ name = "pypi"
 numpy = "*"
 scikit-learn = "*"
 pandas = "*"
+pyshp = "*"
 
 [dev-packages]
 

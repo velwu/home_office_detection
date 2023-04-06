@@ -10,6 +10,7 @@ data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
 scaler = StandardScaler(with_std=False)
 pca = TruncatedSVD(n_components=1, n_iter=10)
 
+
 for uuid, footprint in data.items():
     matrix = utils.convert2matrix(footprint)
 
