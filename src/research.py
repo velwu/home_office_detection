@@ -12,7 +12,7 @@ pca = TruncatedSVD(n_components=1, n_iter=10)
 
 
 for uuid, footprint in data.items():
-    matrix = utils.convert2matrix(footprint)
+    matrix = utils.footprint2matrix(footprint)
 
     std_matrix = scaler.fit_transform(matrix)
     pca.fit(std_matrix)
