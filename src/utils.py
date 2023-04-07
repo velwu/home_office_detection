@@ -95,37 +95,37 @@ class footprint_display:
                 'max':max([max(border[0]) for border in self.border_list]),
                 'min':min([min(border[0]) for border in self.border_list])}}
 
-    def plot_map(self, footprint, img_name, interval, fix_map = True):
+    def plot_map(self, matrix, img_name, interval = 1, fix_map = True):
         if os.path.exists(os.path.join("display", "temp", img_name)):
             shutil.rmtree(os.path.join("display", "temp", img_name))
         os.mkdir(os.path.join("display", "temp", img_name))
 
-        data = {
-            'start_time':[i[0] for i in footprint],
-            'lat':[i[1] for i in footprint],
-            'lon':[i[2] for i in footprint]}
+        if len(matrix.shape) == 1:
+            matrix = matrix.reshape(1, -1)
 
         if fix_map:
             latlon_range = self.latlon_range
             MAP_SIZE = 1
         else:
             latlon_range = {
-                'lat':{'max':max(data['lat']), 'min':min(data['lat'])},
-                'lon':{'max':max(data['lon']), 'min':min(data['lon'])}}
+                'lat':{'max':np.max(matrix[:, :96]), 'min':np.min(matrix[:, :96])},
+                'lon':{'max':np.max(matrix[:, 96:]), 'min':np.min(matrix[:, 96:])}}
             MAP_SIZE = self.MAP_SIZE
         
+        lat_matrix, lon_matrix = matrix[:, :96], matrix[:, 96:]
 
-        for idx in range(0, len(footprint), interval):
+        for col in range(0, 96, interval):
             plt.figure(figsize=(
                 (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
                 (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))
             plt.plot()
-            plt.scatter(
-                data['lon'][max(0, idx-self.DISPLAY_TAIL_LEN):idx],
-                data['lat'][max(0, idx-self.DISPLAY_TAIL_LEN):idx])
-            plt.plot(
-                data['lon'][max(0, idx-self.DISPLAY_TAIL_LEN):idx],
-                data['lat'][max(0, idx-self.DISPLAY_TAIL_LEN):idx])
+            for row in range(matrix.shape[0]):
+                plt.scatter(
+                    lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
+                    lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
+                plt.plot(
+                    lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
+                    lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
 
             for coor_X, coor_Y in self.border_list:
                 plt.plot(coor_X, coor_Y)
@@ -135,9 +135,9 @@ class footprint_display:
             plt.text(
                 latlon_range['lon']['min'],
                 latlon_range['lat']['min'],
-                data['start_time'][idx].strftime("%Y-%m-%d %H:%M:%S"),
+                (datetime.datetime(2023,4,1)+datetime.timedelta(minutes=col*15)).strftime("%H:%M:%S"),
                 fontdict={'size':20, 'color':'red'})
-            plt.savefig(os.path.join("display", "temp", img_name, f"{idx}.png"))
+            plt.savefig(os.path.join("display", "temp", img_name, f"{col}.png"))
             plt.close()
 
         images = []

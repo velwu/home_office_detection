@@ -19,10 +19,10 @@ def pipeline(uuid):
 
     std_matrix = scaler.fit_transform(matrix)
     pca.fit(std_matrix)
-    pc1 = pca.components_[0] + scaler.mean_
+    pc1 = scaler.inverse_transform(pca.components_)
 
-    painter.plot_map(footprint, f"{uuid}_footprint", 3, fix_map=False)
-    painter.plot_map(utils.matrix2foorprint(pc1), f"{uuid}_PC1", 3, fix_map=False)
+    painter.plot_map(matrix, f"{uuid}_footprint", 1, fix_map=False)
+    painter.plot_map(pc1, f"{uuid}_PC1", 1, fix_map=False)
 
 
 with Pool() as pool:
