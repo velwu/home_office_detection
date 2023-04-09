@@ -8,12 +8,12 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
 
 data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
-scaler = StandardScaler(with_std=False)
-pca = TruncatedSVD(n_components=1, n_iter=10)
-painter = utils.footprint_display()
-
 
 def pipeline(uuid):
+    scaler = StandardScaler(with_mean=True, with_std=False)
+    pca = TruncatedSVD(n_components=1, n_iter=10)
+    painter = utils.footprint_display()
+    
     footprint = data[uuid]
     matrix = utils.footprint2matrix(footprint)
 

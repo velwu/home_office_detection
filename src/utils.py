@@ -72,7 +72,7 @@ def matrix2foorprint(matrix):
 
 class footprint_display:
     def __init__(self):
-        self.MAP_SIZE = 20
+        self.MAP_SIZE_COEFFICIENT = 0.5
         self.DISPLAY_TAIL_LEN = 20
         shape = shapefile.Reader("resource/shapefiles/idn_admbnda_adm1_bps_20200401.shp")
 
@@ -94,6 +94,8 @@ class footprint_display:
             'lon':{
                 'max':max([max(border[0]) for border in self.border_list]),
                 'min':min([min(border[0]) for border in self.border_list])}}
+        self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
+                                    (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
 
     def plot_map(self, matrix, img_name, interval = 1, fix_map = True):
         if os.path.exists(os.path.join("display", "temp", img_name)):
@@ -102,17 +104,18 @@ class footprint_display:
 
         if len(matrix.shape) == 1:
             matrix = matrix.reshape(1, -1)
+        
+        lat_matrix, lon_matrix = matrix[:, :96], matrix[:, 96:]
 
         if fix_map:
             latlon_range = self.latlon_range
-            MAP_SIZE = 1
+            MAP_SIZE = 1 * self.MAP_SIZE_COEFFICIENT
         else:
             latlon_range = {
-                'lat':{'max':np.max(matrix[:, :96]), 'min':np.min(matrix[:, :96])},
-                'lon':{'max':np.max(matrix[:, 96:]), 'min':np.min(matrix[:, 96:])}}
-            MAP_SIZE = self.MAP_SIZE
-        
-        lat_matrix, lon_matrix = matrix[:, :96], matrix[:, 96:]
+                'lat':{'max':np.max(lat_matrix), 'min':np.min(lat_matrix)},
+                'lon':{'max':np.max(lon_matrix), 'min':np.min(lon_matrix)},
+                'area':(np.max(lat_matrix)-np.min(lat_matrix))*(np.max(lon_matrix)-np.min(lon_matrix))}
+            MAP_SIZE = self.MAP_SIZE_COEFFICIENT*(self.latlon_range['area']/latlon_range['area'])**0.5
 
         for col in range(0, 96, interval):
             plt.figure(figsize=(
