@@ -10,6 +10,7 @@ pandas = "*"
 pyshp = "*"
 matplotlib = "*"
 imageio = "*"
+seaborn = "*"
 
 [dev-packages]
 

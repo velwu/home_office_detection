@@ -7,12 +7,22 @@ import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 
+# ------------- create and clean necessary folders -------------------
+if os.path.exists("display/temp"):
+    shutil.rmtree("display/temp")
+
+for root, folder, files in os.walk('display/footprint'):
+    for file in files:
+        if file.split(sep='_')[-1] != 'footprint.gif':
+            os.remove(os.path.join(root, file))
+
 for path in [
     'display',
     'display/temp',
     'display/footprint']:
     if os.path.exists(path) == False:
         os.mkdir(path)
+# --------------------------------------------------------------------
 
 def read_dmp_data(path):
     data = {}
@@ -97,61 +107,63 @@ class footprint_display:
         self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
                                     (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
 
-    def plot_map(self, matrix, img_name, interval = 1, fix_map = True):
-        if os.path.exists(os.path.join("display", "temp", img_name)):
+    def plot_map(self, matrix, img_name, fix_map = True):
+        file_path = os.path.join("display", "footprint", f"{img_name}.gif")
+
+        if os.path.exists(file_path) == False:
+            print(f"{img_name}.gif")
+            os.mkdir(os.path.join("display", "temp", img_name))
+
+            if len(matrix.shape) == 1:
+                matrix = matrix.reshape(1, -1)
+            
+            lat_matrix, lon_matrix = matrix[:, :96], matrix[:, 96:]
+
+            if fix_map:
+                latlon_range = self.latlon_range
+                MAP_SIZE = 1 * self.MAP_SIZE_COEFFICIENT
+            else:
+                latlon_range = {
+                    'lat':{'max':np.max(lat_matrix), 'min':np.min(lat_matrix)},
+                    'lon':{'max':np.max(lon_matrix), 'min':np.min(lon_matrix)},
+                    'area':(np.max(lat_matrix)-np.min(lat_matrix))*(np.max(lon_matrix)-np.min(lon_matrix))}
+                MAP_SIZE = self.MAP_SIZE_COEFFICIENT*(self.latlon_range['area']/latlon_range['area'])**0.5
+
+            for col in range(0, 96):
+                plt.figure(figsize=(
+                    (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
+                    (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))
+                plt.plot()
+                for row in range(matrix.shape[0]):
+                    plt.scatter(
+                        lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
+                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
+                    plt.plot(
+                        lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
+                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
+
+                for coor_X, coor_Y in self.border_list:
+                    plt.plot(coor_X, coor_Y)
+
+                plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
+                plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
+                plt.text(
+                    latlon_range['lon']['min'],
+                    latlon_range['lat']['min'],
+                    (datetime.datetime(2023,4,1)+datetime.timedelta(minutes=col*15)).strftime("%H:%M:%S"),
+                    fontdict={'size':20, 'color':'red'})
+                plt.savefig(os.path.join("display", "temp", img_name, f"{col}.png"))
+                plt.close()
+
+            images = []
+            for root_img, folder_img, files_img in os.walk(os.path.join("display", "temp", img_name)):
+                for file_img in files_img:
+                    images.append([int(file_img.replace(".png", "")), imageio.v3.imread(os.path.join(root_img,file_img))])
+
+            images.sort()
+            images = [i[1] for i in images]
+            imageio.mimsave(file_path, images, duration=0.1)
             shutil.rmtree(os.path.join("display", "temp", img_name))
-        os.mkdir(os.path.join("display", "temp", img_name))
-
-        if len(matrix.shape) == 1:
-            matrix = matrix.reshape(1, -1)
-        
-        lat_matrix, lon_matrix = matrix[:, :96], matrix[:, 96:]
-
-        if fix_map:
-            latlon_range = self.latlon_range
-            MAP_SIZE = 1 * self.MAP_SIZE_COEFFICIENT
-        else:
-            latlon_range = {
-                'lat':{'max':np.max(lat_matrix), 'min':np.min(lat_matrix)},
-                'lon':{'max':np.max(lon_matrix), 'min':np.min(lon_matrix)},
-                'area':(np.max(lat_matrix)-np.min(lat_matrix))*(np.max(lon_matrix)-np.min(lon_matrix))}
-            MAP_SIZE = self.MAP_SIZE_COEFFICIENT*(self.latlon_range['area']/latlon_range['area'])**0.5
-
-        for col in range(0, 96, interval):
-            plt.figure(figsize=(
-                (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
-                (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))
-            plt.plot()
-            for row in range(matrix.shape[0]):
-                plt.scatter(
-                    lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                    lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
-                plt.plot(
-                    lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                    lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
-
-            for coor_X, coor_Y in self.border_list:
-                plt.plot(coor_X, coor_Y)
-
-            plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
-            plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
-            plt.text(
-                latlon_range['lon']['min'],
-                latlon_range['lat']['min'],
-                (datetime.datetime(2023,4,1)+datetime.timedelta(minutes=col*15)).strftime("%H:%M:%S"),
-                fontdict={'size':20, 'color':'red'})
-            plt.savefig(os.path.join("display", "temp", img_name, f"{col}.png"))
-            plt.close()
-
-        images = []
-        for root_img, folder_img, files_img in os.walk(os.path.join("display", "temp", img_name)):
-            for file_img in files_img:
-                images.append([int(file_img.replace(".png", "")), imageio.v3.imread(os.path.join(root_img,file_img))])
-
-        images.sort()
-        images = [i[1] for i in images]
-        imageio.mimsave(os.path.join("display", "footprint", f"{img_name}.gif"), images, duration=0.1)
-        shutil.rmtree(os.path.join("display", "temp", img_name))
         
         
             
