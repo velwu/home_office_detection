@@ -12,7 +12,7 @@ import seaborn as sns
 if os.path.exists("display/temp"):
     shutil.rmtree("display/temp")
 
-for path in ['display/qualified', 'display/unqualified']:
+for path in ['display/footprint']:
     for root, folder, files in os.walk(path):
         for file in files:
             if file.split(sep='_')[-1] != 'footprint.gif':
@@ -21,8 +21,7 @@ for path in ['display/qualified', 'display/unqualified']:
 for path in [
     'display',
     'display/temp',
-    'display/qualified',
-    'display/unqualified']:
+    'display/footprint']:
     if os.path.exists(path) == False:
         os.mkdir(path)
 # --------------------------------------------------------------------
@@ -110,8 +109,8 @@ class footprint_display:
         self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
                                     (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
 
-    def plot_map(self, matrix, img_name, fix_map = True, qualified=True):
-        file_path = os.path.join("display", "qualified" if qualified else "unqualified",f"{img_name}.gif")
+    def plot_map(self, matrix, img_name, fix_map = True):
+        file_path = os.path.join("display", "footprint", f"{img_name}.gif")
 
         if os.path.exists(file_path) == False:
             os.mkdir(os.path.join("display", "temp", img_name))
@@ -167,7 +166,7 @@ class footprint_display:
             imageio.mimsave(file_path, images, duration=0.1)
             shutil.rmtree(os.path.join("display", "temp", img_name))
         
-def weight_plot(weight_data, uuid, note, qualified=True):
+def weight_plot(weight_data, uuid, note):
     plt.plot()
     sns.scatterplot(data=weight_data,x='x',y='y',hue='label')
     plt.text(
@@ -175,5 +174,5 @@ def weight_plot(weight_data, uuid, note, qualified=True):
         min(weight_data['y']),
         note,
         fontdict={'size':10, 'color':'red'})
-    plt.savefig(os.path.join("display", "qualified" if qualified else "unqualified", f"{uuid}_weight.png"))
+    plt.savefig(os.path.join("display", "footprint", f"{uuid}_weight.png"))
     plt.close()

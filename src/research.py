@@ -15,36 +15,31 @@ data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
 
 def pipeline(uuid):
     print(uuid)
-    from sklearn.cluster import KMeans
+    from sklearn.cluster import OPTICS
     
     painter = utils.footprint_display()
     footprint = data[uuid]
 
-    pca = TruncatedSVD(n_components=len(footprint)-1, n_iter=10)
     matrix = utils.footprint2matrix(footprint)
-
+    pca = TruncatedSVD(n_components=matrix.shape[0]-1, n_iter=10)
+    
     W = pca.fit_transform(matrix)
     H = pca.components_
-    qualified = True
 
-    cluster = KMeans(n_clusters=2, n_init=20).fit(W)
+    cluster = OPTICS().fit(W)
     labels_array = cluster.labels_
-    label_to_pc1_weight_dict = {label:np.sum(W[np.where(labels_array==label),0]) for label in set(labels_array.tolist())}
-    label_pc1_weight_list = [[label, weight_sum] for label, weight_sum in label_to_pc1_weight_dict.items()]
-    label_pc1_weight_list.sort(reverse=True, key=lambda x:x[1])
-    label = label_pc1_weight_list[0][0]
-
-    label_list = labels_array==label
+    PC_weight_mean_array = np.array([np.mean(W[np.where(labels_array==label)],axis=0) for label in set(labels_array.tolist())])
+    
     cluster_data = {
         'x':W[:,0].tolist(), 
         'y':W[:,1].tolist(), 
-        'label':label_list.tolist()}
+        'label':labels_array.tolist()}
 
-    utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}", qualified)
+    utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
 
-    # result = np.dot(np.mean(W[labels_array==label],axis=0).reshape(1,-1), H)
-    painter.plot_map(matrix, f"{uuid}_footprint", fix_map=False, qualified=qualified)
-    # painter.plot_map(result, f"{uuid}_PC1", fix_map=False, qualified=qualified)
+    result = np.dot(PC_weight_mean_array, H)
+    painter.plot_map(matrix, f"{uuid}_footprint", fix_map=False)
+    painter.plot_map(result, f"{uuid}_PC1", fix_map=False)
 
 
 with Pool() as pool:

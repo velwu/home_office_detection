@@ -12,10 +12,6 @@ data = np.array(
     [[i+random.gauss(mu=0.0, sigma=0.1) for i in range(-2,9)]+
     [j/10+random.gauss(mu=0.0, sigma=0.01) for j in range(-5,6)] for k in range(3)])
 
-data = np.array(
-    [[random.gauss(mu=3, sigma=0.05) for i in range(-5,6)] for j in range(4)]
-)
-
 if mode == 'TruncatedSVD': 
     pca = TruncatedSVD(n_components=2, n_iter=10)
     W = pca.fit_transform(data)
