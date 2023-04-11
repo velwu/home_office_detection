@@ -6,20 +6,23 @@ import shapefile
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ------------- create and clean necessary folders -------------------
 if os.path.exists("display/temp"):
     shutil.rmtree("display/temp")
 
-for root, folder, files in os.walk('display/footprint'):
-    for file in files:
-        if file.split(sep='_')[-1] != 'footprint.gif':
-            os.remove(os.path.join(root, file))
+for path in ['display/qualified', 'display/unqualified']:
+    for root, folder, files in os.walk(path):
+        for file in files:
+            if file.split(sep='_')[-1] != 'footprint.gif':
+                os.remove(os.path.join(root, file))
 
 for path in [
     'display',
     'display/temp',
-    'display/footprint']:
+    'display/qualified',
+    'display/unqualified']:
     if os.path.exists(path) == False:
         os.mkdir(path)
 # --------------------------------------------------------------------
@@ -107,11 +110,10 @@ class footprint_display:
         self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
                                     (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
 
-    def plot_map(self, matrix, img_name, fix_map = True):
-        file_path = os.path.join("display", "footprint", f"{img_name}.gif")
+    def plot_map(self, matrix, img_name, fix_map = True, qualified=True):
+        file_path = os.path.join("display", "qualified" if qualified else "unqualified",f"{img_name}.gif")
 
         if os.path.exists(file_path) == False:
-            print(f"{img_name}.gif")
             os.mkdir(os.path.join("display", "temp", img_name))
 
             if len(matrix.shape) == 1:
@@ -133,7 +135,10 @@ class footprint_display:
                 plt.figure(figsize=(
                     (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
                     (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))
-                plt.plot()
+
+                for coor_X, coor_Y in self.border_list:
+                    plt.plot(coor_X, coor_Y)
+
                 for row in range(matrix.shape[0]):
                     plt.scatter(
                         lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
@@ -141,9 +146,6 @@ class footprint_display:
                     plt.plot(
                         lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
                         lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
-
-                for coor_X, coor_Y in self.border_list:
-                    plt.plot(coor_X, coor_Y)
 
                 plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
                 plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
@@ -165,8 +167,13 @@ class footprint_display:
             imageio.mimsave(file_path, images, duration=0.1)
             shutil.rmtree(os.path.join("display", "temp", img_name))
         
-        
-            
-
-    
-            
+def weight_plot(weight_data, uuid, note, qualified=True):
+    plt.plot()
+    sns.scatterplot(data=weight_data,x='x',y='y',hue='label')
+    plt.text(
+        min(weight_data['x']),
+        min(weight_data['y']),
+        note,
+        fontdict={'size':10, 'color':'red'})
+    plt.savefig(os.path.join("display", "qualified" if qualified else "unqualified", f"{uuid}_weight.png"))
+    plt.close()
