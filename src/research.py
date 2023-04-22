@@ -45,6 +45,7 @@ def pipeline(uuid):
 
     # figure out where home/office is
     '''
+    https://www.nature.com/articles/s41598-021-88822-3
     latlon_list = []
     cluster_input = []
     for row in range(result.shape[0]):
