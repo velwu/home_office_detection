@@ -56,18 +56,18 @@ def pipeline(uuid):
             previous_lat, previous_lon = result[row, col-1], result[row, col+95]
             lat, lon = result[row, col], result[row, col+96]
             latlon_list.append([lat, lon])
-            cluster_input.append([lat, lon, distance.distance((lat, lon), (previous_lat, previous_lon)).m])
+            cluster_input.append([lat, lon, 1/distance.distance((lat, lon), (previous_lat, previous_lon)).m])
 
-    distance_list = [i[2] for i in cluster_input]
-    plt.plot()
-    sns.kdeplot(data={'distance':distance_list}, x='distance')
-    plt.savefig(f"display/footprint/{uuid}_kde.png")
-    plt.close()
+    # distance_list = [i[2] for i in cluster_input]
+    # plt.plot()
+    # sns.kdeplot(data={'distance':distance_list}, x='distance')
+    # plt.savefig(f"display/footprint/{uuid}_kde.png")
+    # plt.close()
 
-    # scaler = StandardScaler(with_mean=False, with_std=True)
-    # cluster = OPTICS(min_samples=20).fit(scaler.fit_transform(np.array(cluster_input)))
-    # group = [str(i) for i in cluster.labels_]
-    # painter.plot_map(latlon_list, group, f"{uuid}_display", fix_map=fix_map)
+    scaler = StandardScaler(with_mean=False, with_std=True)
+    cluster = OPTICS(min_samples=30).fit(scaler.fit_transform(np.array(cluster_input)))
+    group = [str(i) for i in cluster.labels_]
+    painter.plot_map(latlon_list, group, f"{uuid}_display", fix_map=fix_map)
     # '''
     
 with Pool() as pool:
