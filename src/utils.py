@@ -16,7 +16,7 @@ if os.path.exists("display/temp"):
 for path in ['display/footprint']:
     for root, folder, files in os.walk(path):
         for file in files:
-            if file.split(sep='_')[-1] != 'footprint.gif':
+            if file.split(sep='.')[-1] != 'gif':
                 os.remove(os.path.join(root, file))
 
 for path in [

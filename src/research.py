@@ -7,6 +7,9 @@ import numpy as np
 from geopy import distance
 from multiprocessing import Pool
 from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
 fix_map = False
@@ -36,16 +39,16 @@ def pipeline(uuid):
         'y':W[:,1].tolist(), 
         'label':labels_array.tolist()}
 
-    utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
+    # utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)
-    painter.plot_gif(matrix, f"{uuid}_footprint", fix_map=fix_map)
-    painter.plot_gif(result, f"{uuid}_PC1", fix_map=fix_map)
+    # painter.plot_gif(matrix, f"{uuid}_footprint", fix_map=fix_map)
+    # painter.plot_gif(result, f"{uuid}_PC1", fix_map=fix_map)
 
     # figure out where home/office is
-    '''
-    https://www.nature.com/articles/s41598-021-88822-3
+    # '''
+    # https://www.nature.com/articles/s41598-021-88822-3
     latlon_list = []
     cluster_input = []
     for row in range(result.shape[0]):
@@ -55,11 +58,17 @@ def pipeline(uuid):
             latlon_list.append([lat, lon])
             cluster_input.append([lat, lon, distance.distance((lat, lon), (previous_lat, previous_lon)).m])
 
+    distance_list = [i[2] for i in cluster_input]
+    plt.plot()
+    sns.kdeplot(data={'distance':distance_list}, x='distance')
+    plt.savefig(f"display/footprint/{uuid}_kde.png")
+    plt.close()
 
-    cluster = OPTICS().fit(np.array(cluster_input))
-    group = cluster.labels_
-    painter.plot_map(latlon_list, group, f"{uuid}_display", fix_map=fix_map)
-    '''
+    # scaler = StandardScaler(with_mean=False, with_std=True)
+    # cluster = OPTICS(min_samples=20).fit(scaler.fit_transform(np.array(cluster_input)))
+    # group = [str(i) for i in cluster.labels_]
+    # painter.plot_map(latlon_list, group, f"{uuid}_display", fix_map=fix_map)
+    # '''
     
 with Pool() as pool:
     pool.map(pipeline, list(data))
