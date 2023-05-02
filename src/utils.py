@@ -7,6 +7,7 @@ import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 # ------------- create and clean necessary folders -------------------
 if os.path.exists("display/temp"):
@@ -42,6 +43,12 @@ def read_dmp_data(path):
         data[uuid].sort()
     
     return data
+
+def read_home_work_data(path):
+    df_hw = pd.read_csv(path)
+    df_hw["id"] = df_hw["id"].astype(str)
+
+    return df_hw
 
 def footprint2matrix(footprint):
     matrix = [[None for j in range(192)] for i in range((footprint[-1][0].date() - footprint[0][0].date()).days+1)]
@@ -131,6 +138,8 @@ class footprint_display:
                 MAP_SIZE = self.MAP_SIZE_COEFFICIENT*(self.latlon_range['area']/latlon_range['area'])**0.5
 
             for col in range(0, 96):
+                # TODO 1: let each point scale with duration
+                # TODO 2: add home-office nodes as lat-lon
                 plt.figure(figsize=(
                     (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
                     (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))

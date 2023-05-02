@@ -7,14 +7,15 @@ import numpy as np
 from multiprocessing import Pool
 from sklearn.decomposition import TruncatedSVD
 
-data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
+data_footprint = utils.read_dmp_data("data/0322-0409_batchE_top.csv")
+data_home_and_work = utils.read_home_work_data("data/0409_batchE_HW.csv")
 
 def pipeline(uuid):
     print(uuid)
     from sklearn.cluster import OPTICS
     
     painter = utils.footprint_display()
-    footprint = data[uuid]
+    footprint = data_footprint[uuid]
 
     # conduct PCA
     matrix = utils.footprint2matrix(footprint)
@@ -42,6 +43,5 @@ def pipeline(uuid):
     painter.plot_map(result, f"{uuid}_PC1", fix_map=False)
 
 
-with Pool() as pool:
-    pool.map(pipeline, list(data))
-
+#with Pool(processes=4) as pool:
+#    pool.map(pipeline, list(data))
