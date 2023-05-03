@@ -94,7 +94,7 @@ class footprint_display:
         self.MAP_SIZE_COEFFICIENT = 0.5
         self.DISPLAY_TAIL_LEN = 20
         shape = shapefile.Reader("resource/shapefiles/idn_admbnda_adm1_bps_20200401.shp")
-
+        
         self.border_list = []
         
         for shapeRecord in shape.shapeRecords():
@@ -116,7 +116,7 @@ class footprint_display:
         self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
                                     (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
 
-    def plot_map(self, matrix, img_name, fix_map = True):
+    def plot_map(self, matrix, img_name, fix_map = True, home_work_data = dict()):
         file_path = os.path.join("display", "footprint", f"{img_name}.gif")
 
         if os.path.exists(file_path) == False:
@@ -150,10 +150,25 @@ class footprint_display:
                 for row in range(matrix.shape[0]):
                     plt.scatter(
                         lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
+                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
+                        zorder=1,)
                     plt.plot(
                         lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
+                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
+                        zorder=2,)
+
+                # if len(home_work_data) > 0:
+                poi_point_size = 500
+                poi_shape = "*"
+                home_point_x = home_work_data['home_lon']
+                home_point_y = home_work_data['home_lat']
+                home_color = 'green'
+                work_point_x = home_work_data['work_lon']
+                work_point_y = home_work_data['work_lat']
+                work_color = 'darkblue'
+                
+                plt.scatter(home_point_x, home_point_y, s=poi_point_size, c=home_color, marker=poi_shape,zorder=101)
+                plt.scatter(work_point_x, work_point_y, s=poi_point_size, c=work_color, marker=poi_shape,zorder=100)
 
                 plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
                 plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])

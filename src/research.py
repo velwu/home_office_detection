@@ -8,7 +8,7 @@ from multiprocessing import Pool
 from sklearn.decomposition import TruncatedSVD
 
 data_footprint = utils.read_dmp_data("data/0322-0409_batchE_top.csv")
-data_home_and_work = utils.read_home_work_data("data/0409_batchE_HW.csv")
+data_home_and_work = utils.read_home_work_data("data/0322-0409_batchE_HW.csv")
 
 def pipeline(uuid):
     print(uuid)
@@ -16,6 +16,10 @@ def pipeline(uuid):
     
     painter = utils.footprint_display()
     footprint = data_footprint[uuid]
+    home_work_node = data_home_and_work.query(f'id == "{uuid}"').to_dict(orient='records')[0]
+
+    print("HOME WORK NODE EXISTS FOR : " + uuid)
+    print(home_work_node)
 
     # conduct PCA
     matrix = utils.footprint2matrix(footprint)
@@ -39,9 +43,9 @@ def pipeline(uuid):
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)
-    painter.plot_map(matrix, f"{uuid}_footprint", fix_map=False)
-    painter.plot_map(result, f"{uuid}_PC1", fix_map=False)
+    painter.plot_map(matrix, f"{uuid}_footprint", fix_map=False, home_work_data=home_work_node)
+    painter.plot_map(result, f"{uuid}_PC1", fix_map=False, home_work_data=home_work_node)
 
 
-#with Pool(processes=4) as pool:
-#    pool.map(pipeline, list(data))
+with Pool(processes=8) as pool:
+    pool.map(pipeline, list(data_footprint))
