@@ -21,18 +21,22 @@ def pipeline(uuid):
     cluster_input = []
     latlon_list = []
 
-    for idx in range(1, len(footprint)):
+    for idx in range(1, len(footprint)-1):
         T1, lat_t1, lon_t1 = footprint[idx-1]
         T2, lat_t2, lon_t2 = footprint[idx]
+        T3, lat_t3, lon_t3 = footprint[idx+1]
         
-        cluster_input.append([
-            lat_t2, 
-            lon_t2, 
-            (T2-T1).total_seconds()/(epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)])
-        
-        latlon_list.append([
-            lat_t2, 
-            lon_t2])
+        if np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]) < 0:
+            cluster_input.append([
+                lat_t2, 
+                lon_t2,
+                np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]) 
+                ])
+            # (T2-T1).total_seconds()/(epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)
+            
+            latlon_list.append([
+                lat_t2, 
+                lon_t2])
     
     scaler = StandardScaler(with_mean=False, with_std=True)
     cluster = OPTICS(min_samples=int(len(footprint)/10)).fit(scaler.fit_transform(np.array(cluster_input)))

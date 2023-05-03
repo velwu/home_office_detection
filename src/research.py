@@ -43,8 +43,6 @@ def pipeline(uuid):
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)
-    # painter.plot_gif(matrix, f"{uuid}_footprint", fix_map=fix_map)
-    # painter.plot_gif(result, f"{uuid}_PC1", fix_map=fix_map)
 
     # figure out where home/office is
     # '''
@@ -52,11 +50,24 @@ def pipeline(uuid):
     latlon_list = []
     cluster_input = []
     for row in range(result.shape[0]):
-        for col in range(1, 96):
-            previous_lat, previous_lon = result[row, col-1], result[row, col+95]
+        for col in range(1, 96-1):
             lat, lon = result[row, col], result[row, col+96]
+            lat_prev, lon_prev = result[row, col-1], result[row, col+95]
+            lat_next, lon_next = result[row, col+1], result[row, col+97]
+            vector1 = [lat-lat_prev, lon-lon_prev]
+            vector2 = [lat_next-lat, lon_next-lon]
+
             latlon_list.append([lat, lon])
-            cluster_input.append([lat, lon, 1/distance.distance((lat, lon), (previous_lat, previous_lon)).m])
+            cluster_input.append([
+                lat, 
+                lon,
+                np.dot(vector1, vector2),
+                distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
+            # cluster_input.append([
+            #     lat, 
+            #     lon, 
+            #     np.dot(vector1, vector2),
+            #     distance.distance((lat, lon), (lat_prev, lon_prev)).m])
 
     # distance_list = [i[2] for i in cluster_input]
     # plt.plot()
@@ -65,10 +76,17 @@ def pipeline(uuid):
     # plt.close()
 
     scaler = StandardScaler(with_mean=False, with_std=True)
-    cluster = OPTICS(min_samples=30).fit(scaler.fit_transform(np.array(cluster_input)))
+    cluster = OPTICS(min_samples=25).fit(scaler.fit_transform(np.array(cluster_input)))
     group = [str(i) for i in cluster.labels_]
-    painter.plot_map(latlon_list, group, f"{uuid}_display", fix_map=fix_map)
+    centers = [[
+        np.mean([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
+        np.mean([latlon_list[i][1] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level])]
+        for level in set(cluster.labels_) if level >=0]
+    
     # '''
+    # painter.plot_gif(matrix, f"{uuid}_footprint", fix_map=fix_map)
+    painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map)
+    painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
     
 with Pool() as pool:
     pool.map(pipeline, list(data))

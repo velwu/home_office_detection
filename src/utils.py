@@ -110,7 +110,7 @@ class footprint_display:
         self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
                                     (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
     
-    def plot_map(self, latlon_list, group, img_name, fix_map = True):
+    def plot_map(self, latlon_list, group, img_name, centers=None, fix_map = True):
         file_path = os.path.join("display", "footprint", f"{img_name}.png")
         data = pd.DataFrame({
             'lat':[i[0] for i in latlon_list],
@@ -136,6 +136,10 @@ class footprint_display:
             plt.plot(coor_X, coor_Y)
         
         sns.scatterplot(data=data, x='lon', y='lat', hue='group')
+
+        if centers:
+            for center_lat, center_lon in centers:
+                plt.scatter([center_lon], [center_lat], marker='s', s=50, c='r')
         
         plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
         plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
@@ -144,7 +148,7 @@ class footprint_display:
             
 
 
-    def plot_gif(self, matrix, img_name, fix_map = True):
+    def plot_gif(self, matrix, img_name, centers=None, fix_map = True):
         file_path = os.path.join("display", "footprint", f"{img_name}.gif")
 
         if os.path.exists(file_path) == False:
@@ -172,6 +176,10 @@ class footprint_display:
 
                 for coor_X, coor_Y in self.border_list:
                     plt.plot(coor_X, coor_Y)
+
+                if centers:
+                    for center_lat, center_lon in centers:
+                        plt.scatter([center_lon], [center_lat], marker='s', s=50, c='r')
 
                 for row in range(matrix.shape[0]):
                     plt.scatter(
