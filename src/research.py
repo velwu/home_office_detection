@@ -57,12 +57,13 @@ def pipeline(uuid):
             vector1 = [lat-lat_prev, lon-lon_prev]
             vector2 = [lat_next-lat, lon_next-lon]
 
-            latlon_list.append([lat, lon])
-            cluster_input.append([
-                lat, 
-                lon,
-                np.dot(vector1, vector2),
-                distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
+            if np.dot(vector1, vector2) < 0:
+                latlon_list.append([lat, lon])
+                cluster_input.append([
+                    lat, 
+                    lon,
+                    np.dot(vector1, vector2),
+                    distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
             # cluster_input.append([
             #     lat, 
             #     lon, 
@@ -76,11 +77,11 @@ def pipeline(uuid):
     # plt.close()
 
     scaler = StandardScaler(with_mean=False, with_std=True)
-    cluster = OPTICS(min_samples=25).fit(scaler.fit_transform(np.array(cluster_input)))
+    cluster = OPTICS(min_samples=round(len(latlon_list)/6)).fit(scaler.fit_transform(np.array(cluster_input)))
     group = [str(i) for i in cluster.labels_]
     centers = [[
-        np.mean([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
-        np.mean([latlon_list[i][1] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level])]
+        np.median([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
+        np.median([latlon_list[i][1] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level])]
         for level in set(cluster.labels_) if level >=0]
     
     # '''
