@@ -85,7 +85,7 @@ def pipeline(uuid):
         for level in set(cluster.labels_) if level >=0]
     
     # '''
-    # painter.plot_gif(matrix, f"{uuid}_footprint", fix_map=fix_map)
+    painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map)
     painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map)
     painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
     
