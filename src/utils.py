@@ -139,7 +139,7 @@ class footprint_display:
 
         if centers:
             for center_lat, center_lon in centers:
-                plt.scatter([center_lon], [center_lat], marker='s', s=50, c='r')
+                plt.scatter([center_lon], [center_lat], marker='s', s=60, c='k')
         
         plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
         plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
@@ -177,10 +177,6 @@ class footprint_display:
                 for coor_X, coor_Y in self.border_list:
                     plt.plot(coor_X, coor_Y)
 
-                if centers:
-                    for center_lat, center_lon in centers:
-                        plt.scatter([center_lon], [center_lat], marker='s', s=50, c='r')
-
                 for row in range(matrix.shape[0]):
                     plt.scatter(
                         lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
@@ -188,6 +184,10 @@ class footprint_display:
                     plt.plot(
                         lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
                         lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist())
+
+                if centers:
+                    for center_lat, center_lon in centers:
+                        plt.scatter([center_lon], [center_lat], marker='s', s=60, c='k')
 
                 plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
                 plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])

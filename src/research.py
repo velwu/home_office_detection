@@ -32,7 +32,7 @@ def pipeline(uuid):
     cluster = OPTICS().fit(W)
     labels_array = cluster.labels_
     labels_set = set([label for label in labels_array if label >= 0])
-    PC_weight_mean_array = np.array([np.mean(W[np.where(labels_array==label)],axis=0) for label in labels_set])
+    PC_weight_mean_array = np.array([np.median(W[np.where(labels_array==label)],axis=0) for label in labels_set])
     
     cluster_data = {
         'x':W[:,0].tolist(), 
@@ -45,8 +45,6 @@ def pipeline(uuid):
     result = np.dot(PC_weight_mean_array, H)
 
     # figure out where home/office is
-    # '''
-    # https://www.nature.com/articles/s41598-021-88822-3
     latlon_list = []
     cluster_input = []
     for row in range(result.shape[0]):
@@ -64,17 +62,7 @@ def pipeline(uuid):
                     lon,
                     np.dot(vector1, vector2),
                     distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
-            # cluster_input.append([
-            #     lat, 
-            #     lon, 
-            #     np.dot(vector1, vector2),
-            #     distance.distance((lat, lon), (lat_prev, lon_prev)).m])
 
-    # distance_list = [i[2] for i in cluster_input]
-    # plt.plot()
-    # sns.kdeplot(data={'distance':distance_list}, x='distance')
-    # plt.savefig(f"display/footprint/{uuid}_kde.png")
-    # plt.close()
 
     scaler = StandardScaler(with_mean=False, with_std=True)
     cluster = OPTICS(min_samples=round(len(latlon_list)/6)).fit(scaler.fit_transform(np.array(cluster_input)))

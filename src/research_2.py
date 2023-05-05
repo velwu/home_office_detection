@@ -30,9 +30,9 @@ def pipeline(uuid):
             cluster_input.append([
                 lat_t2, 
                 lon_t2,
-                np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]) 
-                ])
-            # (T2-T1).total_seconds()/(epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)
+                np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]),
+                (T2-T1).total_seconds()/(epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)])
+            
             
             latlon_list.append([
                 lat_t2, 
