@@ -11,6 +11,7 @@ pyshp = "*"
 matplotlib = "*"
 imageio = "*"
 seaborn = "*"
+geopy = "*"
 
 [dev-packages]
 

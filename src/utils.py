@@ -5,6 +5,7 @@ import csv
 import shapefile
 import imageio
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -120,8 +121,45 @@ class footprint_display:
                 'min':min([min(border[0]) for border in self.border_list])}}
         self.latlon_range['area'] = (self.latlon_range['lat']['max']-self.latlon_range['lat']['min'])*\
                                     (self.latlon_range['lon']['max']-self.latlon_range['lon']['min'])
+    
+    def plot_map(self, latlon_list, group, img_name, centers=None, fix_map = True):
+        file_path = os.path.join("display", "footprint", f"{img_name}.png")
+        data = pd.DataFrame({
+            'lat':[i[0] for i in latlon_list],
+            'lon':[i[1] for i in latlon_list],
+            'group':group
+        })
 
-    def plot_map(self, matrix, img_name, fix_map = True, home_work_data = dict()):
+        if fix_map:
+            latlon_range = self.latlon_range
+            MAP_SIZE = 1 * self.MAP_SIZE_COEFFICIENT
+        else:
+            latlon_range = {
+                'lat':{'max':np.max(data['lat']), 'min':np.min(data['lat'])},
+                'lon':{'max':np.max(data['lon']), 'min':np.min(data['lon'])},
+                'area':(np.max(data['lat'])-np.min(data['lat']))*(np.max(data['lon'])-np.min(data['lon']))}
+            MAP_SIZE = self.MAP_SIZE_COEFFICIENT*(self.latlon_range['area']/latlon_range['area'])**0.5
+        
+        plt.figure(figsize=(
+            (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
+            (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))
+
+        for coor_X, coor_Y in self.border_list:
+            plt.plot(coor_X, coor_Y)
+        
+        sns.scatterplot(data=data, x='lon', y='lat', hue='group')
+
+        if centers:
+            for center_lat, center_lon in centers:
+                plt.scatter([center_lon], [center_lat], marker='s', s=60, c='k')
+        
+        plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
+        plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
+        plt.savefig(file_path)
+        plt.close()
+
+
+    def plot_gif(self, matrix, img_name, centers=None, fix_map=True, home_work_data=None):
         file_path = os.path.join("display", "footprint", f"{img_name}.gif")
 
         if os.path.exists(file_path) == False:
@@ -170,6 +208,10 @@ class footprint_display:
                 
                 plt.scatter(home_point_x, home_point_y, s=poi_point_size, c=home_color, marker=poi_shape,zorder=101)
                 plt.scatter(work_point_x, work_point_y, s=poi_point_size, c=work_color, marker=poi_shape,zorder=100)
+
+                if centers:
+                    for center_lat, center_lon in centers:
+                        plt.scatter([center_lon], [center_lat], marker='s', s=60, c='k')
 
                 plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
                 plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])

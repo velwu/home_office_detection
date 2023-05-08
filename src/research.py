@@ -4,18 +4,25 @@ os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.append("src/")
 import utils
 import numpy as np
+from geopy import distance
 from multiprocessing import Pool
 from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-data_footprint = utils.read_dmp_data("data/0322-0409_batchE_top.csv")
+
+data = utils.read_dmp_data("data/0322-0409_batchE_top.csv")
 data_home_and_work = utils.read_home_work_data("data/0322-0409_batchE_HW.csv")
+
+fix_map = False
 
 def pipeline(uuid):
     print(uuid)
     from sklearn.cluster import OPTICS
     
     painter = utils.footprint_display()
-    footprint = data_footprint[uuid]
+    footprint = data[uuid]
     home_work_node = data_home_and_work.query(f'id == "{uuid}"').to_dict(orient='records')[0]
 
     print("HOME WORK NODE EXISTS FOR : " + uuid)
@@ -32,20 +39,50 @@ def pipeline(uuid):
     cluster = OPTICS().fit(W)
     labels_array = cluster.labels_
     labels_set = set([label for label in labels_array if label >= 0])
-    PC_weight_mean_array = np.array([np.mean(W[np.where(labels_array==label)],axis=0) for label in labels_set])
+    PC_weight_mean_array = np.array([np.median(W[np.where(labels_array==label)],axis=0) for label in labels_set])
     
     cluster_data = {
         'x':W[:,0].tolist(), 
         'y':W[:,1].tolist(), 
         'label':labels_array.tolist()}
 
-    utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
+    # utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)
-    painter.plot_map(matrix, f"{uuid}_footprint", fix_map=False, home_work_data=home_work_node)
-    painter.plot_map(result, f"{uuid}_PC1", fix_map=False, home_work_data=home_work_node)
+
+    # figure out where home/office is
+    latlon_list = []
+    cluster_input = []
+    for row in range(result.shape[0]):
+        for col in range(1, 96-1):
+            lat, lon = result[row, col], result[row, col+96]
+            lat_prev, lon_prev = result[row, col-1], result[row, col+95]
+            lat_next, lon_next = result[row, col+1], result[row, col+97]
+            vector1 = [lat-lat_prev, lon-lon_prev]
+            vector2 = [lat_next-lat, lon_next-lon]
+
+            if np.dot(vector1, vector2) < 0:
+                latlon_list.append([lat, lon])
+                cluster_input.append([
+                    lat, 
+                    lon,
+                    np.dot(vector1, vector2),
+                    distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
 
 
-with Pool(processes=8) as pool:
-    pool.map(pipeline, list(data_footprint))
+    scaler = StandardScaler(with_mean=False, with_std=True)
+    cluster = OPTICS(min_samples=round(len(latlon_list)/6)).fit(scaler.fit_transform(np.array(cluster_input)))
+    group = [str(i) for i in cluster.labels_]
+    centers = [[
+        np.median([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
+        np.median([latlon_list[i][1] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level])]
+        for level in set(cluster.labels_) if level >=0]
+    
+    # '''
+    painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
+    painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
+    painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
+    
+# with Pool() as pool:
+#    pool.map(pipeline, list(data))
