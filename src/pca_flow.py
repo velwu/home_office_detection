@@ -174,3 +174,22 @@ def plot_latlon_traces(df:pd.DataFrame):
                 weight=1.5
             ).add_to(map)
     return map
+
+def haversine(lat1, lon1, lat2, lon2):
+    # Convert latitude and longitude to radians
+    lat1, lon1, lat2, lon2 = np.radians([lat1, lon1, lat2, lon2])
+
+    # Calculate differences
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    # Haversine formula
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+
+    # Earth's radius in km
+    earth_radius = 6371
+
+    # Calculate the distance in km
+    distance = earth_radius * c
+    return distance

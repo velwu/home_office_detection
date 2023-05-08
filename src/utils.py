@@ -37,7 +37,9 @@ def read_dmp_data(path):
                 data[uuid].append([
                     datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S'),
                     float(lat),
-                    float(lon)])
+                    float(lon),
+                    int(duration)
+                ])
     
     for uuid in list(data):
         data[uuid].sort()
@@ -51,29 +53,32 @@ def read_home_work_data(path):
     return df_hw
 
 def footprint2matrix(footprint):
-    matrix = [[None for j in range(192)] for i in range((footprint[-1][0].date() - footprint[0][0].date()).days+1)]
+    matrix = [[None for j in range(288)] for i in range((footprint[-1][0].date() - footprint[0][0].date()).days+1)]
 
-    for start_time, lat, lon in footprint:
+    for start_time, lat, lon,duration in footprint:
         row = (start_time.date() - footprint[0][0].date()).days
         col = int((start_time - start_time.replace(hour=0, minute=0)).total_seconds()/(15*60))
 
         matrix[row][col] = lat
         matrix[row][col+96] = lon
+        matrix[row][col+192] = duration
 
-    _, pervious_lat, pervious_lon = footprint[0]
+    _, previous_lat, previous_lon, previous_dur = footprint[0]
 
     for row in range(len(matrix)):
         for col in range(96):
             if matrix[row][col] == None:
-                matrix[row][col] = pervious_lat
-                matrix[row][col+96] = pervious_lon
+                matrix[row][col] = previous_lat
+                matrix[row][col+96] = previous_lon
+                matrix[row][col+192] = previous_dur
             else:
-                pervious_lat = matrix[row][col]
-                pervious_lon = matrix[row][col+96]
+                previous_lat = matrix[row][col]
+                previous_lon = matrix[row][col+96]
+                previous_dur = matrix[row][col+192]
     
     return np.array(matrix, dtype=float)
 
-def matrix2foorprint(matrix):
+def matrix2footprint(matrix):
     footprint = []
 
     if len(matrix.shape) == 1:
@@ -125,7 +130,7 @@ class footprint_display:
             if len(matrix.shape) == 1:
                 matrix = matrix.reshape(1, -1)
             
-            lat_matrix, lon_matrix = matrix[:, :96], matrix[:, 96:]
+            lat_matrix, lon_matrix, dur_matrix = matrix[:, :96], matrix[:, 96:192], matrix[:, 192:]
 
             if fix_map:
                 latlon_range = self.latlon_range
@@ -138,8 +143,6 @@ class footprint_display:
                 MAP_SIZE = self.MAP_SIZE_COEFFICIENT*(self.latlon_range['area']/latlon_range['area'])**0.5
 
             for col in range(0, 96):
-                # TODO 1: let each point scale with duration
-                # TODO 2: add home-office nodes as lat-lon
                 plt.figure(figsize=(
                     (latlon_range['lon']['max']-latlon_range['lon']['min'])*MAP_SIZE, 
                     (latlon_range['lat']['max']-latlon_range['lat']['min'])*MAP_SIZE))
@@ -148,14 +151,12 @@ class footprint_display:
                     plt.plot(coor_X, coor_Y)
 
                 for row in range(matrix.shape[0]):
-                    plt.scatter(
-                        lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                        zorder=1,)
-                    plt.plot(
-                        lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                        lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist(),
-                        zorder=2,)
+                    list_lon = lon_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist()
+                    list_lat = lat_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist()
+                    list_dur = dur_matrix[row, max(0, col-self.DISPLAY_TAIL_LEN):col].tolist()
+
+                    plt.scatter(list_lon,list_lat,s=[x // 50 for x in list_dur],zorder=1,)
+                    plt.plot(list_lon,list_lat,zorder=2,)
 
                 # if len(home_work_data) > 0:
                 poi_point_size = 500
