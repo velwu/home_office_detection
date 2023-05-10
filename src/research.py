@@ -23,7 +23,7 @@ def pipeline(uuid):
 
     # conduct PCA
     matrix = utils.footprint2matrix(footprint)
-    pca = TruncatedSVD(n_components=2, n_iter=10)
+    pca = TruncatedSVD(n_components=10, n_iter=10)
     
     W = pca.fit_transform(matrix)
     H = pca.components_
