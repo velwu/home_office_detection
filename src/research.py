@@ -55,7 +55,7 @@ def pipeline(uuid):
             vector1 = [lat-lat_prev, lon-lon_prev]
             vector2 = [lat_next-lat, lon_next-lon]
 
-            if np.dot(vector1, vector2) < 0:
+            if np.dot(vector1, vector2) <= 0:
                 latlon_list.append([lat, lon])
                 cluster_input.append([
                     lat, 
