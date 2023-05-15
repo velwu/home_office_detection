@@ -83,6 +83,6 @@ def pipeline(uuid):
     painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
     painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
     painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
-    
-# with Pool() as pool:
+
+# with Pool(6) as pool:
 #    pool.map(pipeline, list(data))

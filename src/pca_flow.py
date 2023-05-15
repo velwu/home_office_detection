@@ -16,15 +16,10 @@ def read_loc_data(file_path:str):
 
     return df
 
-# TODO: multiprocessing: list([df1, df2, ~~])
-
 def get_timestamped_latlon(df:pd.DataFrame, select_id:str, day_count:int, fill_method:str):
 
-    # TODO: this also has to work for multiple IDs
 
     df_sample = df[df["id"] == select_id][['timestamp', 'lat', 'lon']]
-
-    # TODO: is this the best way to dedup?
     df_unique = df_sample.drop_duplicates(subset='timestamp', keep='first')
     
     df_unique.set_index('timestamp', inplace=True)

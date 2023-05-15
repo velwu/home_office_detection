@@ -17,7 +17,8 @@ if os.path.exists("display/temp"):
 for path in ['display/footprint']:
     for root, folder, files in os.walk(path):
         for file in files:
-            if file.split(sep='_')[-1] != 'footprint.gif':
+            #if file.split(sep='_')[-1] != 'footprint.gif':
+            if True:
                 os.remove(os.path.join(root, file))
 
 for path in [
@@ -205,21 +206,65 @@ class footprint_display:
                 work_point_x = home_work_data['work_lon']
                 work_point_y = home_work_data['work_lat']
                 work_color = 'darkblue'
-                
-                plt.scatter(home_point_x, home_point_y, s=poi_point_size, c=home_color, marker=poi_shape,zorder=101)
-                plt.scatter(work_point_x, work_point_y, s=poi_point_size, c=work_color, marker=poi_shape,zorder=100)
 
+                x_limit_min = [latlon_range['lon']['min']]
+                x_limit_max = [latlon_range['lon']['max']]
+                y_limit_min = [latlon_range['lat']['min']]
+                y_limit_max = [latlon_range['lat']['max']]
+                
                 if centers:
                     for center_lat, center_lon in centers:
-                        plt.scatter([center_lon], [center_lat], marker='s', s=60, c='k')
+                        x_limit_min.append(center_lon)
+                        x_limit_max.append(center_lon)
+                        y_limit_min.append(center_lat)
+                        y_limit_max.append(center_lat)
+                        enricher_pca_dist = str(haversine(home_point_y, home_point_x, center_lat, center_lon))
+                        plt.scatter([center_lon], [center_lat], marker=poi_shape, s=poi_point_size, c='k', zorder=200)
+                else:
+                    enricher_pca_dist = "N/A"
 
-                plt.xlim([latlon_range['lon']['min'], latlon_range['lon']['max']])
-                plt.ylim([latlon_range['lat']['min'], latlon_range['lat']['max']])
+                if (0 not in [home_point_x, home_point_y]):
+                    x_limit_min.append(home_point_x)
+                    x_limit_max.append(home_point_x)
+                    y_limit_min.append(home_point_y)
+                    y_limit_max.append(home_point_y)
+                    plt.scatter(home_point_x, home_point_y, s=poi_point_size, c=home_color, marker=poi_shape,zorder=101)
+                if (0 not in [work_point_x, work_point_y]):
+                    x_limit_min.append(work_point_x)
+                    x_limit_max.append(work_point_x)
+                    y_limit_min.append(work_point_y)
+                    y_limit_max.append(work_point_y)
+                    plt.scatter(work_point_x, work_point_y, s=poi_point_size, c=work_color, marker=poi_shape,zorder=100)
+                if (0 not in [home_point_x, home_point_y, work_point_x, work_point_y]):
+                    home_office_dist = str(haversine(home_point_y, home_point_x, work_point_y, work_point_x))
+                else:
+                    home_office_dist = "N/A"
+                
+                x_padding = 0.25
+                y_padding = 0.12
+                plot_borders = {
+                    "lon": {"min": min(x_limit_min) - x_padding, "max": max(x_limit_max) + x_padding},
+                    "lat": {"min": min(y_limit_min) - y_padding, "max": max(y_limit_max) + y_padding}
+                }
+
+                plt.xlim([plot_borders['lon']['min'], plot_borders['lon']['max']])
+                plt.ylim([plot_borders['lat']['min'], plot_borders['lat']['max']])
                 plt.text(
-                    latlon_range['lon']['min'],
-                    latlon_range['lat']['min'],
-                    (datetime.datetime(2023,4,1)+datetime.timedelta(minutes=col*15)).strftime("%H:%M:%S"),
-                    fontdict={'size':20, 'color':'red'})
+                    x=plot_borders['lon']['min'],
+                    y=plot_borders['lat']['min'],
+                    s="TIME: "+(datetime.datetime(2023,4,1)+datetime.timedelta(minutes=col*15)).strftime("%H:%M:%S"),
+                    fontdict={'size':20, 'color':'darkgreen'},
+                    bbox=dict(boxstyle='round', facecolor='#00FF00', alpha=0.69))
+
+                plt.text(
+                    x=plot_borders['lon']['min'],
+                    y=plot_borders['lat']['max'],
+                    s="\n".join(["Home-Office Distance (km): " + home_office_dist, 
+                                 "Enricher-PCA Distance (km): " + enricher_pca_dist]),
+                    fontdict={'size':20, 'color':'white'},
+                    bbox=dict(boxstyle='round', facecolor='#000000', alpha=0.69),
+                    horizontalalignment='left'
+                )
                 plt.savefig(os.path.join("display", "temp", img_name, f"{col}.png"))
                 plt.close()
 
@@ -243,3 +288,22 @@ def weight_plot(weight_data, uuid, note):
         fontdict={'size':10, 'color':'red'})
     plt.savefig(os.path.join("display", "footprint", f"{uuid}_weight.png"))
     plt.close()
+
+def haversine(lat1, lon1, lat2, lon2):
+    # Convert latitude and longitude to radians
+    lat1, lon1, lat2, lon2 = np.radians([lat1, lon1, lat2, lon2])
+
+    # Calculate differences
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    # Haversine formula
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+
+    # Earth's radius in km
+    earth_radius = 6371
+
+    # Calculate the distance in km
+    distance = earth_radius * c
+    return distance
