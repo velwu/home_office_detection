@@ -30,9 +30,10 @@ def pipeline(uuid):
 
     # conduct PCA
     matrix = utils.footprint2matrix(footprint)
+    matrix_to_use = matrix[:, :192]
     pca = TruncatedSVD(n_components=10, n_iter=10)
     
-    W = pca.fit_transform(matrix)
+    W = pca.fit_transform(matrix_to_use)
     H = pca.components_
 
     # weight clustering, and get average weights of each cluster
@@ -81,8 +82,8 @@ def pipeline(uuid):
     
     # '''
     painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
-    painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
+    # painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
     painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
 
-# with Pool(6) as pool:
+#with Pool(6) as pool:
 #    pool.map(pipeline, list(data))
