@@ -23,13 +23,13 @@ def pipeline(uuid):
 
     # conduct PCA
     matrix = utils.footprint2matrix(footprint)
-    pca = TruncatedSVD(n_components=10, n_iter=10)
+    pca = TruncatedSVD(n_components=10, n_iter=20)
     
     W = pca.fit_transform(matrix)
     H = pca.components_
 
     # weight clustering, and get average weights of each cluster
-    cluster = OPTICS().fit(W)
+    cluster = OPTICS(min_samples=10).fit(W)
     labels_array = cluster.labels_
     labels_set = set([label for label in labels_array if label >= 0])
     PC_weight_mean_array = np.array([np.median(W[np.where(labels_array==label)],axis=0) for label in labels_set])
@@ -39,7 +39,7 @@ def pipeline(uuid):
         'y':W[:,1].tolist(), 
         'label':labels_array.tolist()}
 
-    # utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
+    utils.weight_plot(cluster_data, uuid, "")
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)

@@ -18,6 +18,7 @@ def pipeline(uuid):
 
     painter = utils.footprint_display()
     footprint = data[uuid]
+    matrix = utils.footprint2matrix(footprint)
     cluster_input = []
     latlon_list = []
 
@@ -26,12 +27,12 @@ def pipeline(uuid):
         T2, lat_t2, lon_t2 = footprint[idx]
         T3, lat_t3, lon_t3 = footprint[idx+1]
         
-        if np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]) < 0:
+        if np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]) <= 0:
             cluster_input.append([
                 lat_t2, 
                 lon_t2,
                 np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]),
-                (T2-T1).total_seconds()/(epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)])
+                (epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)])
             
             
             latlon_list.append([
@@ -41,7 +42,13 @@ def pipeline(uuid):
     scaler = StandardScaler(with_mean=False, with_std=True)
     cluster = OPTICS(min_samples=int(len(footprint)/10)).fit(scaler.fit_transform(np.array(cluster_input)))
     group = [str(i) for i in cluster.labels_]
-    painter.plot_map(latlon_list, group, f"{uuid}_display", fix_map=fix_map)
+    centers = [[
+        np.median([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
+        np.median([latlon_list[i][1] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level])]
+        for level in set(cluster.labels_) if level >=0]
+
+    painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
+    painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map)
 
 with Pool() as pool:
     pool.map(pipeline, list(data))
