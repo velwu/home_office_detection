@@ -30,7 +30,7 @@ def pipeline(uuid):
     H = pca.components_
 
     # weight clustering, and get average weights of each cluster
-    cluster = OPTICS().fit(W)
+    cluster = OPTICS(min_samples=5).fit(W)
     labels_array = cluster.labels_
     labels_set = set([label for label in labels_array if label >= 0])
     PC_weight_mean_array = np.array([np.median(W[np.where(labels_array==label)],axis=0) for label in labels_set])
@@ -40,7 +40,7 @@ def pipeline(uuid):
         'y':W[:,1].tolist(), 
         'label':labels_array.tolist()}
 
-    # utils.weight_plot(cluster_data, uuid, "")
+    utils.weight_plot(cluster_data, uuid, "")
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)
@@ -66,7 +66,7 @@ def pipeline(uuid):
                     distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
 
     scaler = StandardScaler(with_mean=False, with_std=True)
-    cluster = OPTICS(min_samples=round(len(latlon_list)/8)).fit(scaler.fit_transform(np.array(cluster_input)))
+    cluster = OPTICS(min_samples=round(len(latlon_list)/4)).fit(scaler.fit_transform(np.array(cluster_input)))
     group = [str(i) for i in cluster.labels_]
     centers = [[
         np.median([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
@@ -75,8 +75,8 @@ def pipeline(uuid):
 
     
     # '''
-    # painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map)
-    # painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map)
+    painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map)
+    painter.plot_gif(result, f"{uuid}_PC1", centers=centers, fix_map=fix_map)
     painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
     
 with Pool() as pool:
