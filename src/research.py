@@ -1,3 +1,7 @@
+'''
+以PCA + OPTICS clustering進行停留點定位
+'''
+
 import os
 import sys
 os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

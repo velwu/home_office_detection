@@ -1,3 +1,7 @@
+'''
+跳過PCA, 只用OPTICS clustering進行停留點定位
+'''
+
 import os
 import sys
 os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -10,7 +14,7 @@ from sklearn.preprocessing import StandardScaler
 
 data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
 fix_map = False
-epi = sys.float_info.epsilon
+epsilon = sys.float_info.epsilon
 
 def pipeline(uuid):
     print(uuid)
@@ -26,14 +30,16 @@ def pipeline(uuid):
         T1, lat_t1, lon_t1 = footprint[idx-1]
         T2, lat_t2, lon_t2 = footprint[idx]
         T3, lat_t3, lon_t3 = footprint[idx+1]
+        vector1 = np.array([lat_t2-lat_t1, lon_t2-lon_t1])
+        vector2 = np.array([lat_t3-lat_t2, lon_t3-lon_t2])
+        dot = np.dot(vector1, vector2)/(np.sqrt(np.sum(vector1**2)+epsilon)*(np.sqrt(np.sum(vector2**2)+epsilon)))
         
-        if np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]) <= 0:
+        if dot <= -0.8:
             cluster_input.append([
                 lat_t2, 
                 lon_t2,
-                np.dot([lat_t2-lat_t1, lon_t2-lon_t1], [lat_t3-lat_t2, lon_t3-lon_t2]),
-                (epi+distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m)])
-            
+                dot,
+                distance.distance((lat_t2, lon_t2), (lat_t1, lon_t1)).m])
             
             latlon_list.append([
                 lat_t2, 
