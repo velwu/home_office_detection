@@ -218,10 +218,14 @@ class footprint_display:
                         x_limit_max.append(center_lon)
                         y_limit_min.append(center_lat)
                         y_limit_max.append(center_lat)
+                        pca_lat = center_lat
+                        pca_lon = center_lon
                         enricher_pca_dist = str(haversine(home_point_y, home_point_x, center_lat, center_lon))
                         plt.scatter([center_lon], [center_lat], marker=poi_shape, s=poi_point_size, c='k', zorder=200)
                 else:
                     enricher_pca_dist = "N/A"
+                    pca_lat = float(0)
+                    pca_lon = float(0)
 
                 if (0 not in [home_point_x, home_point_y]):
                     x_limit_min.append(home_point_x)
@@ -240,8 +244,10 @@ class footprint_display:
                 else:
                     home_office_dist = "N/A"
                 
-                x_padding = 0.25
-                y_padding = 0.12
+                # NOTE: bump x_padding and y_padding up if you'd like the resulting charts to zoom out a bit
+                x_padding = 0 # ex: 0.25
+                y_padding = 0 # ex: 0.12
+                
                 plot_borders = {
                     "lon": {"min": min(x_limit_min) - x_padding, "max": max(x_limit_max) + x_padding},
                     "lat": {"min": min(y_limit_min) - y_padding, "max": max(y_limit_max) + y_padding}
@@ -259,8 +265,13 @@ class footprint_display:
                 plt.text(
                     x=plot_borders['lon']['min'],
                     y=plot_borders['lat']['max'],
-                    s="\n".join(["Home-Office Distance (km): " + home_office_dist, 
-                                 "Enricher-PCA Distance (km): " + enricher_pca_dist]),
+                    s="\n".join([
+                        "Enricher HOME: " + str(home_point_y) + ", " + str(home_point_x),
+                        "Enricher OFFICE: " + str(work_point_y) + ", " + str(work_point_x),
+                        "PCA HOME/OFFICE: " + str(pca_lat) + ", " + str(pca_lon),
+                        "Home-Office Distance (km): " + home_office_dist, 
+                        "Enricher-PCA Distance (km): " + enricher_pca_dist
+                    ]),
                     fontdict={'size':20, 'color':'white'},
                     bbox=dict(boxstyle='round', facecolor='#000000', alpha=0.69),
                     horizontalalignment='left'
