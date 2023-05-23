@@ -1,3 +1,7 @@
+'''
+以PCA + OPTICS clustering進行停留點定位
+'''
+
 import os
 import sys
 os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -11,6 +15,7 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+epsilon = sys.float_info.epsilon
 
 data = utils.read_dmp_data("data/0322-0409_batchE_top.csv")
 data_home_and_work = utils.read_home_work_data("data/0322-0409_batchE_HW.csv")
@@ -31,13 +36,13 @@ def pipeline(uuid):
     # conduct PCA
     matrix = utils.footprint2matrix(footprint)
     matrix_to_use = matrix[:, :192]
-    pca = TruncatedSVD(n_components=10, n_iter=10)
+    pca = TruncatedSVD(n_components=10, n_iter=20)
     
     W = pca.fit_transform(matrix_to_use)
     H = pca.components_
 
     # weight clustering, and get average weights of each cluster
-    cluster = OPTICS().fit(W)
+    cluster = OPTICS(min_samples=5).fit(W)
     labels_array = cluster.labels_
     labels_set = set([label for label in labels_array if label >= 0])
     PC_weight_mean_array = np.array([np.median(W[np.where(labels_array==label)],axis=0) for label in labels_set])
@@ -47,7 +52,7 @@ def pipeline(uuid):
         'y':W[:,1].tolist(), 
         'label':labels_array.tolist()}
 
-    # utils.weight_plot(cluster_data, uuid, f"eigen value: {pca.explained_variance_ratio_}")
+    utils.weight_plot(cluster_data, uuid, "")
 
     # each cluster represents a potential routing track
     result = np.dot(PC_weight_mean_array, H)
@@ -60,25 +65,26 @@ def pipeline(uuid):
             lat, lon = result[row, col], result[row, col+96]
             lat_prev, lon_prev = result[row, col-1], result[row, col+95]
             lat_next, lon_next = result[row, col+1], result[row, col+97]
-            vector1 = [lat-lat_prev, lon-lon_prev]
-            vector2 = [lat_next-lat, lon_next-lon]
+            vector1 = np.array([lat-lat_prev, lon-lon_prev])
+            vector2 = np.array([lat_next-lat, lon_next-lon])
+            dot = np.dot(vector1, vector2)/(np.sqrt(np.sum(vector1**2)+epsilon)*(np.sqrt(np.sum(vector2**2)+epsilon)))
 
-            if np.dot(vector1, vector2) <= 0:
+            if dot <= -0.8:
                 latlon_list.append([lat, lon])
                 cluster_input.append([
                     lat, 
                     lon,
-                    np.dot(vector1, vector2),
+                    dot,
                     distance.distance((lat, lon), (lat_prev, lon_prev)).m]) 
 
-
     scaler = StandardScaler(with_mean=False, with_std=True)
-    cluster = OPTICS(min_samples=round(len(latlon_list)/6)).fit(scaler.fit_transform(np.array(cluster_input)))
+    cluster = OPTICS(min_samples=round(len(latlon_list)/4)).fit(scaler.fit_transform(np.array(cluster_input)))
     group = [str(i) for i in cluster.labels_]
     centers = [[
         np.median([latlon_list[i][0] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level]),
         np.median([latlon_list[i][1] for i in range(len(cluster.labels_)) if cluster.labels_[i]==level])]
         for level in set(cluster.labels_) if level >=0]
+
     
     # '''
     painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map, home_work_data=home_work_node)
