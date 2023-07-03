@@ -17,11 +17,13 @@ from sklearn.preprocessing import StandardScaler
 from datetime import datetime
 
 # data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
-data = utils.read_dmp_data("../data/0322-0409_batchE_top.csv")
-fix_map = False
-epsilon = sys.float_info.epsilon
+# data = utils.read_dmp_data("/data/0322-0409_batchE_top.csv")
+# fix_map = False
+# epsilon = sys.float_info.epsilon
 
 def pipeline(uuid:str, threshold:float):
+    data = utils.read_dmp_data("/data/0322-0409_batchE_top.csv")
+    fix_map = False
     print(uuid)
     from sklearn.cluster import OPTICS
 
@@ -61,9 +63,13 @@ def pipeline(uuid:str, threshold:float):
     painter.plot_map(latlon_list, group, f"{uuid}_display", centers=centers, fix_map=fix_map)
     painter.plot_gif(matrix, f"{uuid}_footprint", centers=centers, fix_map=fix_map)
 
-def filter_by_cosine(csv_file_path:str, uuid:str, threshold:float):
+def filter_by_cosine(csv_file_path:str, uuid:str, threshold:float, date_chosen:str):
+    epsilon = sys.float_info.epsilon
     print(uuid)
-    data = utils.read_dmp_data(csv_file_path)
+    if date_chosen == '':
+        data = utils.read_dmp_data(csv_file_path)
+    else:
+        data = utils.read_loc_merged_data(csv_file_path, date_chosen)
     footprint = data[uuid]
     cluster_input = []
     latlon_list = []
@@ -136,11 +142,18 @@ def calculate_color_gradient(time_fraction, color1, color2):
     # This function calculates the color gradient between two colors (RGB format)
     return [int(color1[i] * (1 - time_fraction) + color2[i] * time_fraction) for i in range(3)]
 
-def render_cosined_map(csv_path, uuid, th_num):
-    list_latlon = filter_by_cosine(csv_path, uuid, th_num)
+def render_cosined_map(csv_path, uuid, output_id, th_num):
+    list_latlon = filter_by_cosine(csv_path, uuid, th_num, '')
     print("POINT COUNT " +  str(len(list_latlon)))
     m = plot_list_latlon(list_latlon, uuid + "___" + str(th_num), th_num)
-    m.save(uuid + "___" + str(th_num) + ".html")
+    m.save(output_id + "___" + str(th_num) + ".html")
+    return m
+
+def render_cosined_map_choice(csv_path:str, date_chosen:str, uuid:str, th_num:float):
+    list_latlon = filter_by_cosine(csv_path, uuid, th_num, date_chosen)
+    print("POINT COUNT " +  str(len(list_latlon)))
+    m = plot_list_latlon(list_latlon, uuid + "___" + str(th_num), th_num)
+    m.save(date_chosen + "___" + str(th_num) + ".html")
     return m
 
 #with Pool() as pool:

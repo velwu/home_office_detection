@@ -48,6 +48,28 @@ def read_dmp_data(path):
     
     return data
 
+def read_loc_merged_data(path, date_input): # ex: date = "2023-06-29"
+    data = {}
+    desired_date_dt = datetime.datetime.strptime(date_input, '%Y-%m-%d').date()
+    with open(path) as f:
+        for uuid, start_time, hour, duration, visit_type, lat, lon in csv.reader(f):
+            if uuid != 'id':
+                start_time_dt = datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S').date()
+                if uuid not in data:
+                    data[uuid] = []
+                if desired_date_dt == start_time_dt:
+                    data[uuid].append([
+                        datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S'),
+                        float(lat),
+                        float(lon),
+                        int(duration)
+                    ])
+    
+    for uuid in list(data):
+        data[uuid].sort()
+    
+    return data
+
 def read_home_work_data(path):
     df_hw = pd.read_csv(path)
     df_hw["id"] = df_hw["id"].astype(str)
