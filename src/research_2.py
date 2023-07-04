@@ -4,6 +4,7 @@ THE CHOSEN ONE: 510018242552475
 '''
 
 import os
+import webbrowser
 import sys
 # os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 # sys.path.append("src/")
@@ -149,11 +150,15 @@ def render_cosined_map(csv_path, uuid, output_id, th_num):
     m.save(output_id + "___" + str(th_num) + ".html")
     return m
 
-def render_cosined_map_choice(csv_path:str, date_chosen:str, uuid:str, th_num:float):
-    list_latlon = filter_by_cosine(csv_path, uuid, th_num, date_chosen)
+def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
+    date_to_use = str(date_chosen)
+    id_to_use = str(uuid)
+    list_latlon = filter_by_cosine(csv_path, id_to_use, th_num, date_to_use)
     print("POINT COUNT " +  str(len(list_latlon)))
-    m = plot_list_latlon(list_latlon, uuid + "___" + str(th_num), th_num)
-    m.save(date_chosen + "___" + str(th_num) + ".html")
+    m = plot_list_latlon(list_latlon, id_to_use + "___" + str(th_num), th_num)
+    file_name = id_to_use + "__" + date_to_use + "___" + str(th_num) + ".html"
+    m.save(file_name)
+    webbrowser.open('file://' + os.path.realpath(file_name))
     return m
 
 #with Pool() as pool:
