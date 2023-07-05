@@ -93,7 +93,7 @@ def filter_by_cosine(csv_file_path:str, uuid:str, threshold:float, date_chosen:s
             latlon_list.append([lat_t2, lon_t2, T2, dur_t2])
     return latlon_list
 
-def plot_list_latlon(input_data:list, pic_name:str, th_num:float):
+def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame):
     latlon_data = [[item[0], item[1]] for item in input_data]
     avg_coords = [sum(y) / len(y) for y in zip(*latlon_data)]
     m = folium.Map(location=avg_coords, zoom_start=13)
@@ -128,6 +128,32 @@ def plot_list_latlon(input_data:list, pic_name:str, th_num:float):
                 locations=[input_data[i-1][:2], point[:2]],
                 color=color_code
             ).add_to(m)
+
+    # Get Home and Work locations for the specified uuid
+    hw_old = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == '2023-06-22')]
+    if len(hw_old) > 0:
+        print("HOME-WORK exists: " + str(hw_old))
+        home_lat = hw_old['home_lat'].values[0]
+        home_lon = hw_old['home_lon'].values[0]
+        work_lat = hw_old['work_lat'].values[0]
+        work_lon = hw_old['work_lon'].values[0]
+        # Add Home and Work locations to the map
+        m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, 'info-sign')
+    else:
+        print("NO HOME or WORK location for ID: " + uuid)
+
+    hw_new = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == '2023-07-02')]
+    if len(hw_new) > 0:
+        print("HOME-WORK exists: " + str(hw_new))
+        home_lat = hw_new['home_lat'].values[0]
+        home_lon = hw_new['home_lon'].values[0]
+        work_lat = hw_new['work_lat'].values[0]
+        work_lon = hw_new['work_lon'].values[0]
+        # Add Home and Work locations to the map
+        m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, 'star')
+    else:
+        print("NO HOME or WORK location for ID: " + uuid)
+
     return m
 
 def selet_csv_by_date(csv_file_path:str, date_str:str):
@@ -154,12 +180,35 @@ def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
     date_to_use = str(date_chosen)
     id_to_use = str(uuid)
     list_latlon = filter_by_cosine(csv_path, id_to_use, th_num, date_to_use)
+
+    df_hw_1 = pd.read_csv('../data/HW_0626-0702_before.csv')
+    df_hw_2 = pd.read_csv('../data/HW_0626-0702_after.csv')
+    df_hw = pd.concat([df_hw_1, df_hw_2], ignore_index=True)
+    
     print("POINT COUNT " +  str(len(list_latlon)))
-    m = plot_list_latlon(list_latlon, id_to_use + "___" + str(th_num), th_num)
+    m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw)
     file_name = id_to_use + "__" + date_to_use + "___" + str(th_num) + ".html"
     m.save(file_name)
     webbrowser.open('file://' + os.path.realpath(file_name))
     return m
+
+def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_type):
+    # Add Home location to the map as a green star
+    folium.Marker(
+        location=[home_lat, home_lon],
+        popup='Home: ' + str(home_lat) + "," + str(home_lon),
+        icon=folium.Icon(icon=icon_type, color='green')
+    ).add_to(m)
+
+    # Add Work location to the map as a dark blue star
+    folium.Marker(
+        location=[work_lat, work_lon],
+        popup='Work: ' + str(work_lat) + "," + str(work_lon),
+        icon=folium.Icon(icon=icon_type, color='darkblue')
+    ).add_to(m)
+
+    return m
+
 
 #with Pool() as pool:
 #    pool.map(pipeline, list(data))
