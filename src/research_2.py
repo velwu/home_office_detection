@@ -11,6 +11,7 @@ import sys
 import utils
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import folium
 from geopy import distance
 from multiprocessing import Pool
@@ -93,24 +94,59 @@ def filter_by_cosine(csv_file_path:str, uuid:str, threshold:float, date_chosen:s
             latlon_list.append([lat_t2, lon_t2, T2, dur_t2])
     return latlon_list
 
-def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame):
+def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_type):
+    # Add Home location to the map as a green star
+    folium.Marker(
+        location=[home_lat, home_lon],
+        popup='Home: ' + str(home_lat) + "," + str(home_lon),
+        icon=folium.Icon(icon=icon_type, color='green')
+    ).add_to(m)
+
+    # Add Work location to the map as a dark blue star
+    folium.Marker(
+        location=[work_lat, work_lon],
+        popup='Work: ' + str(work_lat) + "," + str(work_lon),
+        icon=folium.Icon(icon=icon_type, color='darkblue')
+    ).add_to(m)
+
+    return m
+
+import seaborn as sns
+
+def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame, color_by_date=False):
     latlon_data = [[item[0], item[1]] for item in input_data]
     avg_coords = [sum(y) / len(y) for y in zip(*latlon_data)]
     m = folium.Map(location=avg_coords, zoom_start=13)
     
+    if color_by_date:
+        # Generate color palette
+        unique_dates = sorted(list(set([point[2].strftime('%Y-%m-%d') for point in input_data])))
+        colors = sns.color_palette("husl", len(unique_dates)).as_hex()
+        
+        # Create a dictionary to map dates to colors
+        date_to_color = dict(zip(unique_dates, colors))
+
     color1 = [0, 255, 0]  # RGB for green
     color2 = [0, 0, 255]  # RGB for blue
 
     for i, point in enumerate(input_data):
-        # Extract hour from timestamp and scale to 255 for grayscale
-        timestamp = datetime.strptime(str(point[2]), '%Y-%m-%d %H:%M:%S')
-        time_fraction = (timestamp.hour * 60 + timestamp.minute) / (24 * 60)
-        
-        # Calculate color gradient
-        color_gradient = calculate_color_gradient(time_fraction, color1, color2)
-        
-        # Convert to hex color code
-        color_code = '#{:02x}{:02x}{:02x}'.format(*color_gradient)
+        # If color by date is True, map date to color
+        if color_by_date:
+            # Extract date from timestamp
+            date = point[2].strftime('%Y-%m-%d')
+
+            # Map date to color
+            color_code = date_to_color[date]
+        else:
+            # Extract hour from timestamp and scale to 255 for grayscale
+            timestamp = point[2]
+            time_fraction = (timestamp.hour * 60 + timestamp.minute) / (24 * 60)
+
+            # Calculate color gradient
+            color_gradient = calculate_color_gradient(time_fraction, color1, color2)
+            
+            # Convert to hex color code
+            color_code = '#{:02x}{:02x}{:02x}'.format(*color_gradient)
 
         folium.CircleMarker(
             location=[point[0], point[1]], 
@@ -122,37 +158,22 @@ def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.D
             fill_opacity=1.0
         ).add_to(m)
 
-        # Draw lines between points
-        if th_num == 1.0 and i > 0:  # don't try to draw a line for the first point
-            folium.PolyLine(
-                locations=[input_data[i-1][:2], point[:2]],
-                color=color_code
-            ).add_to(m)
-
-    # Get Home and Work locations for the specified uuid
+    # Add Home and Work locations if they exist
     hw_old = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == '2023-06-22')]
     if len(hw_old) > 0:
-        print("HOME-WORK exists: " + str(hw_old))
         home_lat = hw_old['home_lat'].values[0]
         home_lon = hw_old['home_lon'].values[0]
         work_lat = hw_old['work_lat'].values[0]
         work_lon = hw_old['work_lon'].values[0]
-        # Add Home and Work locations to the map
         m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, 'info-sign')
-    else:
-        print("NO HOME or WORK location for ID: " + uuid)
-
+    
     hw_new = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == '2023-07-02')]
     if len(hw_new) > 0:
-        print("HOME-WORK exists: " + str(hw_new))
         home_lat = hw_new['home_lat'].values[0]
         home_lon = hw_new['home_lon'].values[0]
         work_lat = hw_new['work_lat'].values[0]
         work_lon = hw_new['work_lon'].values[0]
-        # Add Home and Work locations to the map
         m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, 'star')
-    else:
-        print("NO HOME or WORK location for ID: " + uuid)
 
     return m
 
@@ -169,11 +190,19 @@ def calculate_color_gradient(time_fraction, color1, color2):
     # This function calculates the color gradient between two colors (RGB format)
     return [int(color1[i] * (1 - time_fraction) + color2[i] * time_fraction) for i in range(3)]
 
-def render_cosined_map(csv_path, uuid, output_id, th_num):
-    list_latlon = filter_by_cosine(csv_path, uuid, th_num, '')
+def render_consined_map_multi_days(csv_path:str, uuid, th_num:float):
+    id_to_use = str(uuid)
+    list_latlon = filter_by_cosine(csv_path, id_to_use, th_num, '')
+
+    df_hw_1 = pd.read_csv('../data/HW_0626-0702_before.csv')
+    df_hw_2 = pd.read_csv('../data/HW_0626-0702_after.csv')
+    df_hw = pd.concat([df_hw_1, df_hw_2], ignore_index=True)
+
     print("POINT COUNT " +  str(len(list_latlon)))
-    m = plot_list_latlon(list_latlon, uuid + "___" + str(th_num), th_num)
-    m.save(output_id + "___" + str(th_num) + ".html")
+    m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw, True)
+    file_name = id_to_use + "__" + "ALL_DAYS" + "___" + str(th_num) + ".html"
+    m.save(file_name)
+    webbrowser.open('file://' + os.path.realpath(file_name))
     return m
 
 def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
@@ -186,27 +215,10 @@ def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
     df_hw = pd.concat([df_hw_1, df_hw_2], ignore_index=True)
     
     print("POINT COUNT " +  str(len(list_latlon)))
-    m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw)
+    m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw, False)
     file_name = id_to_use + "__" + date_to_use + "___" + str(th_num) + ".html"
     m.save(file_name)
     webbrowser.open('file://' + os.path.realpath(file_name))
-    return m
-
-def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_type):
-    # Add Home location to the map as a green star
-    folium.Marker(
-        location=[home_lat, home_lon],
-        popup='Home: ' + str(home_lat) + "," + str(home_lon),
-        icon=folium.Icon(icon=icon_type, color='green')
-    ).add_to(m)
-
-    # Add Work location to the map as a dark blue star
-    folium.Marker(
-        location=[work_lat, work_lon],
-        popup='Work: ' + str(work_lat) + "," + str(work_lon),
-        icon=folium.Icon(icon=icon_type, color='darkblue')
-    ).add_to(m)
-
     return m
 
 
