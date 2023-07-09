@@ -94,24 +94,22 @@ def filter_by_cosine(csv_file_path:str, uuid:str, threshold:float, date_chosen:s
             latlon_list.append([lat_t2, lon_t2, T2, dur_t2])
     return latlon_list
 
-def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_type):
-    # Add Home location to the map as a green star
+def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_color:str, date:str):
+    # Add Home location
     folium.Marker(
         location=[home_lat, home_lon],
-        popup='Home: ' + str(home_lat) + "," + str(home_lon),
-        icon=folium.Icon(icon=icon_type, color='green')
+        popup= date + ' Home: ' + str(home_lat) + "," + str(home_lon),
+        icon=folium.Icon(icon='home', color=icon_color)
     ).add_to(m)
 
-    # Add Work location to the map as a dark blue star
+    # Add Work location
     folium.Marker(
         location=[work_lat, work_lon],
-        popup='Work: ' + str(work_lat) + "," + str(work_lon),
-        icon=folium.Icon(icon=icon_type, color='darkblue')
+        popup= date + ' Work: ' + str(work_lat) + "," + str(work_lon),
+        icon=folium.Icon(icon='film', color=icon_color)
     ).add_to(m)
 
     return m
-
-import seaborn as sns
 
 def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame, color_by_date=False):
     latlon_data = [[item[0], item[1]] for item in input_data]
@@ -159,21 +157,20 @@ def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.D
         ).add_to(m)
 
     # Add Home and Work locations if they exist
-    hw_old = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == '2023-06-22')]
-    if len(hw_old) > 0:
-        home_lat = hw_old['home_lat'].values[0]
-        home_lon = hw_old['home_lon'].values[0]
-        work_lat = hw_old['work_lat'].values[0]
-        work_lon = hw_old['work_lon'].values[0]
-        m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, 'info-sign')
-    
-    hw_new = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == '2023-07-02')]
-    if len(hw_new) > 0:
-        home_lat = hw_new['home_lat'].values[0]
-        home_lon = hw_new['home_lon'].values[0]
-        work_lat = hw_new['work_lat'].values[0]
-        work_lon = hw_new['work_lon'].values[0]
-        m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, 'star')
+    hw_iterations = {
+        '2023-06-22' : 'blue',
+        '2023-07-02' : 'green',
+        '2023-07-09' : 'purple'
+    }
+
+    for date, color in hw_iterations.items():
+        hw_data = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == date)]
+        if len(hw_data) > 0:
+            home_lat = hw_data['home_lat'].values[0]
+            home_lon = hw_data['home_lon'].values[0]
+            work_lat = hw_data['work_lat'].values[0]
+            work_lon = hw_data['work_lon'].values[0]
+            m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, color, date)
 
     return m
 
@@ -190,9 +187,11 @@ def calculate_color_gradient(time_fraction, color1, color2):
     # This function calculates the color gradient between two colors (RGB format)
     return [int(color1[i] * (1 - time_fraction) + color2[i] * time_fraction) for i in range(3)]
 
-def render_consined_map_multi_days(csv_path:str, uuid, th_num:float):
+def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates):
     id_to_use = str(uuid)
-    list_latlon = filter_by_cosine(csv_path, id_to_use, th_num, '')
+    # filter list_latlon by the specified dates
+    list_latlon = [point for point in filter_by_cosine(csv_path, id_to_use, th_num, '') 
+                   if point[2].date() in dates]
 
     df_hw_1 = pd.read_csv('../data/HW_0626-0702_before.csv')
     df_hw_2 = pd.read_csv('../data/HW_0626-0702_after.csv')
@@ -204,6 +203,7 @@ def render_consined_map_multi_days(csv_path:str, uuid, th_num:float):
     m.save(file_name)
     webbrowser.open('file://' + os.path.realpath(file_name))
     return m
+
 
 def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
     date_to_use = str(date_chosen)
@@ -220,6 +220,8 @@ def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
     m.save(file_name)
     webbrowser.open('file://' + os.path.realpath(file_name))
     return m
+
+
 
 
 #with Pool() as pool:
