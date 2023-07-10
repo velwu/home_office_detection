@@ -17,6 +17,7 @@ from geopy import distance
 from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
+from folium.plugins import MarkerCluster
 
 # data = utils.read_dmp_data("data/dmp_loc_traces_Feb10to28_sample100IDs.csv")
 # data = utils.read_dmp_data("/data/0322-0409_batchE_top.csv")
@@ -98,23 +99,28 @@ def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_color:s
     # Add Home location
     folium.Marker(
         location=[home_lat, home_lon],
-        popup= date + ' Home: ' + str(home_lat) + "," + str(home_lon),
+        popup=folium.Popup(f'{date} Home: {home_lat},{home_lon}', max_width=250),
+        tooltip=f'{date} Home',
         icon=folium.Icon(icon='home', color=icon_color)
     ).add_to(m)
 
     # Add Work location
     folium.Marker(
         location=[work_lat, work_lon],
-        popup= date + ' Work: ' + str(work_lat) + "," + str(work_lon),
-        icon=folium.Icon(icon='film', color=icon_color)
+        popup=folium.Popup(f'{date} Work: {work_lat},{work_lon}', max_width=250),
+        tooltip=f'{date} Work',
+        icon=folium.Icon(icon='briefcase', color=icon_color)
     ).add_to(m)
 
     return m
 
-def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame, color_by_date=False):
+def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame, 
+                     color_by_date=False, clustered=False):
     latlon_data = [[item[0], item[1]] for item in input_data]
     avg_coords = [sum(y) / len(y) for y in zip(*latlon_data)]
     m = folium.Map(location=avg_coords, zoom_start=13)
+
+    cluster = MarkerCluster().add_to(m)
     
     if color_by_date:
         # Generate color palette
@@ -146,15 +152,25 @@ def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.D
             # Convert to hex color code
             color_code = '#{:02x}{:02x}{:02x}'.format(*color_gradient)
 
-        folium.CircleMarker(
-            location=[point[0], point[1]], 
-            radius=float(point[3] / 200),
-            tooltip="Start Time:" + str(point[2]) + ", Duration:" + str(point[3]),
-            color=color_code,
-            fill=True,
-            fill_color=color_code,
-            fill_opacity=1.0
-        ).add_to(m)
+        # Create a Marker object with a Circle icon and add it to the cluster
+
+        if clustered:
+            folium.Marker(
+                location=[point[0], point[1]],
+                icon=folium.Icon(color=color_code, icon='circle', icon_color=color_code),
+                tooltip="Start Time:" + str(point[2]) + ", Duration:" + str(point[3])
+            ).add_to(cluster)
+
+        else:
+            folium.CircleMarker(
+                location=[point[0], point[1]], 
+                radius=float(point[3] / 200),
+                tooltip="Start Time:" + str(point[2]) + ", Duration:" + str(point[3]),
+                color=color_code,
+                fill=True,
+                fill_color=color_code,
+                fill_opacity=1.0
+            ).add_to(m)
 
     # Add Home and Work locations if they exist
     hw_iterations = {
@@ -187,7 +203,7 @@ def calculate_color_gradient(time_fraction, color1, color2):
     # This function calculates the color gradient between two colors (RGB format)
     return [int(color1[i] * (1 - time_fraction) + color2[i] * time_fraction) for i in range(3)]
 
-def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates):
+def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates, clustered:bool):
     id_to_use = str(uuid)
     # filter list_latlon by the specified dates
     list_latlon = [point for point in filter_by_cosine(csv_path, id_to_use, th_num, '') 
@@ -198,7 +214,7 @@ def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates):
     df_hw = pd.concat([df_hw_1, df_hw_2], ignore_index=True)
 
     print("POINT COUNT " +  str(len(list_latlon)))
-    m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw, True)
+    m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw, True, clustered)
     file_name = id_to_use + "__" + "ALL_DAYS" + "___" + str(th_num) + ".html"
     m.save(file_name)
     webbrowser.open('file://' + os.path.realpath(file_name))
