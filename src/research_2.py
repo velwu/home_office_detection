@@ -6,6 +6,7 @@ THE CHOSEN ONE: 510018242552475
 import os
 import webbrowser
 import sys
+import glob
 # os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 # sys.path.append("src/")
 import utils
@@ -95,24 +96,51 @@ def filter_by_cosine(csv_file_path:str, uuid:str, threshold:float, date_chosen:s
             latlon_list.append([lat_t2, lon_t2, T2, dur_t2])
     return latlon_list
 
-def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_color:str, date:str):
+def jitter(coord):
+    # Small amount of lat/long change
+    delta = 0.0001
+    # Jitter the coordinate value
+    new_coord = coord + delta * np.random.uniform(-1, 1)
+    return new_coord
+
+def add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, icon_color:str, date:str, plotted_points):
+    precision = 7  # for example, this rounds to the nearest 10,000,000th
+
+    home_lat, home_lon = round(home_lat, precision), round(home_lon, precision)
+    home_coords = (home_lat, home_lon)
+
+    work_lat, work_lon = round(work_lat, precision), round(work_lon, precision)
+    work_coords = (work_lat, work_lon)
+
+    # Check if home coordinates are already plotted, if yes then jitter
+    if home_coords in plotted_points:
+        home_lat, home_lon = jitter(home_lat), jitter(home_lon)
+    else:
+        plotted_points.add(home_coords)
+
     # Add Home location
     folium.Marker(
         location=[home_lat, home_lon],
-        popup=folium.Popup(f'{date} Home: {home_lat},{home_lon}', max_width=250),
+        popup=folium.Popup(f'{date} Home: {home_coords[0]},{home_coords[1]}', max_width=250),
         tooltip=f'{date} Home',
         icon=folium.Icon(icon='home', color=icon_color)
     ).add_to(m)
 
+    # Check if work coordinates are already plotted, if yes then jitter
+    if work_coords in plotted_points:
+        work_lat, work_lon = jitter(work_lat), jitter(work_lon)
+    else:
+        plotted_points.add(work_coords)
+
     # Add Work location
     folium.Marker(
         location=[work_lat, work_lon],
-        popup=folium.Popup(f'{date} Work: {work_lat},{work_lon}', max_width=250),
+        popup=folium.Popup(f'{date} Work: {work_coords[0]},{work_coords[1]}', max_width=250),
         tooltip=f'{date} Work',
         icon=folium.Icon(icon='briefcase', color=icon_color)
     ).add_to(m)
 
-    return m
+    return m, plotted_points
 
 def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.DataFrame, 
                      color_by_date=False, clustered=False):
@@ -129,7 +157,7 @@ def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.D
         
         # Create a dictionary to map dates to colors
         date_to_color = dict(zip(unique_dates, colors))
-
+ 
     color1 = [0, 255, 0]  # RGB for green
     color2 = [0, 0, 255]  # RGB for blue
 
@@ -174,11 +202,12 @@ def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.D
 
     # Add Home and Work locations if they exist
     hw_iterations = {
-        '2023-06-22' : 'blue',
+        '2023-06-22' : 'purple',
         '2023-07-02' : 'green',
-        '2023-07-09' : 'purple'
+        '2023-07-09' : 'beige'
     }
 
+    plotted_points = set()
     for date, color in hw_iterations.items():
         hw_data = df_home_work[(df_home_work['id'] == int(uuid)) & (df_home_work['date'] == date)]
         if len(hw_data) > 0:
@@ -186,7 +215,7 @@ def plot_list_latlon(input_data:list, uuid:str, th_num:float, df_home_work: pd.D
             home_lon = hw_data['home_lon'].values[0]
             work_lat = hw_data['work_lat'].values[0]
             work_lon = hw_data['work_lon'].values[0]
-            m = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, color, date)
+            m,plotted_points = add_home_work_points(m, home_lat, home_lon, work_lat, work_lon, color, date, plotted_points)
 
     return m
 
@@ -203,15 +232,20 @@ def calculate_color_gradient(time_fraction, color1, color2):
     # This function calculates the color gradient between two colors (RGB format)
     return [int(color1[i] * (1 - time_fraction) + color2[i] * time_fraction) for i in range(3)]
 
-def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates, clustered:bool):
+def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates, th_dur:int, clustered:bool):
     id_to_use = str(uuid)
     # filter list_latlon by the specified dates
-    list_latlon = [point for point in filter_by_cosine(csv_path, id_to_use, th_num, '') 
+    list_latlon = [point for point in filter_by_cosine(csv_path, id_to_use, th_num, '')
                    if point[2].date() in dates]
+    
+    list_latlon = [entry for entry in list_latlon if entry[-1] > th_dur]
 
-    df_hw_1 = pd.read_csv('../data/HW_0626-0702_before.csv')
-    df_hw_2 = pd.read_csv('../data/HW_0626-0702_after.csv')
-    df_hw = pd.concat([df_hw_1, df_hw_2], ignore_index=True)
+    # Get a list of all csv files beginning with 'HW_'
+    csv_files = glob.glob('../data/HW_*.csv')
+
+    # Read them in and concatenate them
+    df_list = [pd.read_csv(f) for f in csv_files]
+    df_hw = pd.concat(df_list, ignore_index=True)
 
     print("POINT COUNT " +  str(len(list_latlon)))
     m = plot_list_latlon(list_latlon, id_to_use, th_num, df_hw, True, clustered)
@@ -220,14 +254,13 @@ def render_consined_map_multi_days(csv_path:str, uuid, th_num:float, dates, clus
     webbrowser.open('file://' + os.path.realpath(file_name))
     return m
 
-
 def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
     date_to_use = str(date_chosen)
     id_to_use = str(uuid)
     list_latlon = filter_by_cosine(csv_path, id_to_use, th_num, date_to_use)
 
-    df_hw_1 = pd.read_csv('../data/HW_0626-0702_before.csv')
-    df_hw_2 = pd.read_csv('../data/HW_0626-0702_after.csv')
+    df_hw_1 = pd.read_csv('../data/HW_0626.csv')
+    df_hw_2 = pd.read_csv('../data/HW_0702.csv')
     df_hw = pd.concat([df_hw_1, df_hw_2], ignore_index=True)
     
     print("POINT COUNT " +  str(len(list_latlon)))
@@ -236,9 +269,6 @@ def render_cosined_map_choice(csv_path:str, date_chosen, uuid, th_num:float):
     m.save(file_name)
     webbrowser.open('file://' + os.path.realpath(file_name))
     return m
-
-
-
 
 #with Pool() as pool:
 #    pool.map(pipeline, list(data))
